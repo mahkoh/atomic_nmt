@@ -16,39 +16,40 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="fcb517fc-07ce-4b71-9aec-274beef04e31" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/lazy_transform.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/benches/my_benchmark.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/bench_arc.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/examples/example1.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/generic/mod.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rseq/abort_on_panic.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rseq/assert_linux_x64.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rseq/atomic.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rseq/mod.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rseq/num_cpus.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rseq/per_cpu_rc.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rseq/per_cpu_thread.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rseq/rseq.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src_old/lib.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src_old/v000_st_naive.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src_old/v005_st_is_some.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src_old/v010_mt_naive.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src_old/v015_mt_is_some.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src_old/v020_mt_atomic_ptr.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src_old/v025_mt_atomic_ptr.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src_old/v030_mt_atomic_ptr.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src_old/v035_mt_atomic_ptr.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/examples/non_monotonic.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rseq/cache_line.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/benches/my_benchmark.rs" beforeDir="false" afterPath="$PROJECT_DIR$/benches/my_benchmark.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/bench_arc.rs" beforeDir="false" afterPath="$PROJECT_DIR$/examples/bench_arc.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/example1.rs" beforeDir="false" afterPath="$PROJECT_DIR$/examples/example1.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rseq/abort_on_panic.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rseq/abort_on_drop.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rseq/atomic.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rseq/atomic.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rseq/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rseq/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rseq/num_cpus.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rseq/num_cpus.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rseq/per_cpu_rc/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rseq/per_cpu_rc/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rseq/per_cpu_rc/x86_64.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rseq/per_cpu_rc/x86_64.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rseq/per_cpu_thread.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rseq/per_cpu_thread.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rseq/rseq.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/rseq/rseq.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src_old/lib.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src_old/v000_st_naive.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src_old/v005_st_is_some.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src_old/v010_mt_naive.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src_old/v015_mt_is_some.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src_old/v020_mt_atomic_ptr.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src_old/v025_mt_atomic_ptr.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src_old/v030_mt_atomic_ptr.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src_old/v035_mt_atomic_ptr.rs" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ChangesViewManager">
+    <option name="groupingKeys">
+      <option value="directory" />
+    </option>
   </component>
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
@@ -86,13 +87,14 @@
     "WebServerToolWindowFactoryState": "false",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "last_opened_file_path": "/home/julian/rust/lazy_transform",
+    "last_opened_file_path": "/home/julian/rust/lazy_transform/examples",
     "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/examples" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/src" />
     </key>
@@ -100,9 +102,26 @@
       <recent name="$PROJECT_DIR$/src/rseq" />
     </key>
   </component>
-  <component name="RunManager" selected="Cargo.Run">
+  <component name="RunManager" selected="Cargo.Run non_monotonic">
     <configuration name="Bench" type="CargoCommandRunConfiguration" factoryName="Cargo Command" nameIsGenerated="true">
       <option name="command" value="bench" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <envs />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Run bench_arc (1)" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="run --package lazy-atomic --example bench_arc" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
@@ -152,8 +171,25 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
-    <configuration name="Run example1" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
-      <option name="command" value="run --package lazy_transform --example example1" />
+    <configuration name="Run example2" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="run --release --package lazy-atomic --example example2" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <envs />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Run non_monotonic" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="run --package lazy-atomic --example non_monotonic" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
@@ -186,25 +222,8 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
-    <configuration name="Test test" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
-      <option name="command" value="test --package lazy_transform --lib test -- --exact" />
-      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
-      <option name="channel" value="DEFAULT" />
-      <option name="requiredFeatures" value="true" />
-      <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
-      <option name="withSudo" value="false" />
-      <option name="buildTarget" value="REMOTE" />
-      <option name="backtrace" value="SHORT" />
-      <envs />
-      <option name="isRedirectInput" value="false" />
-      <option name="redirectInputPath" value="" />
-      <method v="2">
-        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="Test v035_mt_atomic_ptr::test" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
-      <option name="command" value="test --package lazy_transform --lib v035_mt_atomic_ptr::test -- --exact" />
+    <configuration name="Test rseq::per_cpu_thread::test" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="test --package lazy-atomic --lib rseq::per_cpu_thread::test -- --exact" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
@@ -224,17 +243,19 @@
       <item itemvalue="Cargo.Run" />
       <item itemvalue="Cargo.Bench" />
       <item itemvalue="Cargo.Run example1 release" />
+      <item itemvalue="Cargo.Run non_monotonic" />
+      <item itemvalue="Cargo.Run bench_arc (1)" />
+      <item itemvalue="Cargo.Run example2" />
+      <item itemvalue="Cargo.Test rseq::per_cpu_thread::test" />
       <item itemvalue="Cargo.Run bench_arc" />
-      <item itemvalue="Cargo.Run example1" />
-      <item itemvalue="Cargo.Test test" />
-      <item itemvalue="Cargo.Test v035_mt_atomic_ptr::test" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Cargo.Run non_monotonic" />
+        <item itemvalue="Cargo.Run example2" />
+        <item itemvalue="Cargo.Test rseq::per_cpu_thread::test" />
+        <item itemvalue="Cargo.Run bench_arc (1)" />
         <item itemvalue="Cargo.Run bench_arc" />
-        <item itemvalue="Cargo.Run example1" />
-        <item itemvalue="Cargo.Test test" />
-        <item itemvalue="Cargo.Test v035_mt_atomic_ptr::test" />
       </list>
     </recent_temporary>
   </component>

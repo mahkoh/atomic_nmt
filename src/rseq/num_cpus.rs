@@ -6,6 +6,9 @@ const PATH: &str = "/sys/devices/system/cpu/possible";
 ///
 /// This value is a boot-time setting that does not change until reboot. It is used by the kernel
 /// for per-cpu data structures.
+///
+/// Note: If the process is migrated to a different system with a different value, the behavior
+/// is undefined. This is a /proc/self/mem situation.
 pub static NUM_CPUS: Lazy<usize> = Lazy::new(|| {
     let possible = match std::fs::read_to_string(PATH) {
         Ok(p) => p,

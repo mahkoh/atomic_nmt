@@ -1,7 +1,7 @@
 mod bench_arc;
 
 use {
-    lazy_transform::Atomic,
+    lazy_atomic::Atomic,
     std::{sync::Arc, thread, time::Duration},
 };
 

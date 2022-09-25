@@ -1,9 +1,9 @@
 use {
     criterion::{black_box, criterion_group, criterion_main, Criterion},
-    lazy_transform::Atomic,
     parking_lot::Mutex,
     std::{mem, sync::Arc},
 };
+use lazy_atomic::Atomic;
 // use lazy_transform::{
 //     v000_st_naive, v005_st_is_some, v010_mt_naive, v015_mt_is_some, v020_mt_atomic_ptr,
 //     v030_mt_atomic_ptr, v035_mt_atomic_ptr,
@@ -99,17 +99,17 @@ use {
 
 fn atomic(c: &mut Criterion) {
     c.bench_function("gn", |b| {
-        let a = Atomic::new(Arc::new(1));
+        let a = Atomic::new(1);
         b.iter(|| {
             let res = a.get();
-            mem::forget(black_box(res));
+            mem::forget(res);
         });
     });
 }
 
 fn locking(c: &mut Criterion) {
     c.bench_function("gn", |b| {
-        let a = Mutex::new(Arc::new(1));
+        let a = Mutex::new(1);
         b.iter(|| {
             let res = a.lock().clone();
             mem::forget(black_box(res));

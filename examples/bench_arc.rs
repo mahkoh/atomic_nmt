@@ -2,6 +2,7 @@
 
 use {
     crossbeam::atomic::AtomicCell,
+    lazy_atomic::{stats::num_off_cpu_release, Atomic},
     parking_lot::{Mutex, RwLock},
     std::{
         arch::asm,
@@ -10,10 +11,9 @@ use {
         ops::{Deref, DerefMut},
         sync::Arc,
         thread,
-        time::{Duration, Instant},
+        time::{Duration, Instant, SystemTime},
     },
 };
-use lazy_atomic::Atomic;
 
 fn main() {
     // crossbeam();
@@ -24,12 +24,13 @@ fn main() {
 
 macro_rules! value {
     () => {
-        [1u64; 128]
+        SystemTime::now()
+        // [1u64; 2]
     };
 }
 
-const NUM_READERS: usize = 2;
-const NUM_WRITERS: usize = 6;
+const NUM_READERS: usize = 0;
+const NUM_WRITERS: usize = 1;
 const NOPS_AFTER_WRITE: usize = 0;
 
 fn nops() {
@@ -61,10 +62,12 @@ fn atomic() {
     }
     let now = Instant::now();
     for _ in 0..1_000_000 {
-        black_box(atomic.get());
+        println!("{:?}", atomic.get());
+        // black_box(atomic.get());
     }
     let elapsed = now.elapsed();
     println!("atomic: {:?}", elapsed);
+    println!("off-cpu releases: {}", num_off_cpu_release());
 }
 
 fn crossbeam() {
