@@ -1,9 +1,8 @@
-use std::thread;
-use lazy_atomic::Atomic;
+use {lazy_atomic::AtomicNmt, std::thread};
 
 /// This example shows that later calls to `get` can return earlier values.
 fn main() {
-    let atomic = Atomic::new(0);
+    let atomic = AtomicNmt::new(0);
     {
         let atomic = atomic.clone();
         thread::spawn(move || {
@@ -13,8 +12,8 @@ fn main() {
         });
     }
     loop {
-        let mut first = atomic.get();
-        let mut second = atomic.get();
+        let first = atomic.get();
+        let second = atomic.get();
         if second < first {
             println!("{first} -> {second}");
         }

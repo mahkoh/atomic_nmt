@@ -2,7 +2,7 @@
 
 use {
     crossbeam::atomic::AtomicCell,
-    lazy_atomic::{stats::num_off_cpu_release, Atomic},
+    lazy_atomic::{stats::num_off_cpu_release, AtomicNmt, AtomicSlc},
     parking_lot::{Mutex, RwLock},
     std::{
         arch::asm,
@@ -17,23 +17,32 @@ use {
 
 fn main() {
     // crossbeam();
+    // atomic_nmt();
+    atomic_slc();
     // mutex();
     // rwlock();
-    atomic();
 }
 
 macro_rules! value {
     () => {
-        SystemTime::now()
-        // [1u64; 2]
+        // "hello world".to_owned()
+        // SystemTime::now()
+        Arc::new(1)
+        // Arc::new(SystemTime::now())
+        // Arc::new("hello world".to_owned())
+        // [1u64; 128]
     };
 }
 
-const NUM_READERS: usize = 0;
-const NUM_WRITERS: usize = 1;
-const NOPS_AFTER_WRITE: usize = 0;
+const ITERATIONS: usize = 1_000_000;
+
+const NUM_READERS: usize = 4;
+const NUM_WRITERS: usize = 4;
+const NOPS_AFTER_WRITE: usize = 1_000;
 
 fn nops() {
+    thread::sleep(Duration::from_millis(10));
+    // thread::yield_now();
     for _ in 0..NOPS_AFTER_WRITE {
         unsafe {
             asm!("");
@@ -41,8 +50,8 @@ fn nops() {
     }
 }
 
-fn atomic() {
-    let atomic = Atomic::new(value!());
+fn atomic_nmt() {
+    let atomic = AtomicNmt::new(value!());
     for _ in 0..NUM_READERS {
         let atomic = atomic.clone();
         thread::spawn(move || loop {
@@ -57,52 +66,81 @@ fn atomic() {
         });
     }
     thread::sleep(Duration::from_secs(1));
-    for _ in 0..1_000_000 {
+    for _ in 0..ITERATIONS {
         black_box(atomic.get());
     }
     let now = Instant::now();
-    for _ in 0..1_000_000 {
-        println!("{:?}", atomic.get());
-        // black_box(atomic.get());
+    for _ in 0..ITERATIONS {
+        // println!("{:?}", atomic.get());
+        black_box(atomic.get());
     }
     let elapsed = now.elapsed();
     println!("atomic: {:?}", elapsed);
     println!("off-cpu releases: {}", num_off_cpu_release());
 }
 
-fn crossbeam() {
-    let atomic = Arc::new(AtomicCell::new(value!()));
+fn atomic_slc() {
+    let mut atomic = AtomicSlc::new(value!());
     for _ in 0..NUM_READERS {
-        let atomic = atomic.clone();
+        let mut atomic = atomic.clone();
         thread::spawn(move || loop {
-            black_box(atomic.load());
+            atomic.get();
         });
     }
     for _ in 0..NUM_WRITERS {
-        let atomic = atomic.clone();
+        let mut atomic = atomic.clone();
         thread::spawn(move || loop {
-            black_box(atomic.store(value!()));
+            atomic.set(value!());
             nops();
         });
     }
     thread::sleep(Duration::from_secs(1));
-    for _ in 0..1_000_000 {
-        black_box(atomic.load());
+    for _ in 0..ITERATIONS {
+        black_box(atomic.get());
     }
     let now = Instant::now();
-    for _ in 0..1_000_000 {
-        black_box(atomic.load());
+    for _ in 0..ITERATIONS {
+        // println!("{:?}", atomic.get());
+        black_box(atomic.get());
     }
     let elapsed = now.elapsed();
-    println!("crossbeam: {:?}", elapsed);
+    println!("atomic: {:?}", elapsed);
+    println!("off-cpu releases: {}", num_off_cpu_release());
 }
+
+// fn crossbeam() {
+//     let atomic = Arc::new(AtomicCell::new(value!()));
+//     for _ in 0..NUM_READERS {
+//         let atomic = atomic.clone();
+//         thread::spawn(move || loop {
+//             black_box(atomic.load());
+//         });
+//     }
+//     for _ in 0..NUM_WRITERS {
+//         let atomic = atomic.clone();
+//         thread::spawn(move || loop {
+//             black_box(atomic.store(value!()));
+//             nops();
+//         });
+//     }
+//     thread::sleep(Duration::from_secs(1));
+//     for _ in 0..ITERATIONS {
+//         black_box(atomic.load());
+//     }
+//     let now = Instant::now();
+//     for _ in 0..ITERATIONS {
+//         black_box(atomic.load());
+//     }
+//     let elapsed = now.elapsed();
+//     println!("crossbeam: {:?}", elapsed);
+// }
 
 fn mutex() {
     let atomic = Arc::new(Mutex::new(value!()));
     for _ in 0..NUM_READERS {
         let atomic = atomic.clone();
         thread::spawn(move || loop {
-            black_box(atomic.lock().clone());
+            black_box(atomic.lock().deref());
         });
     }
     for _ in 0..NUM_WRITERS {
@@ -113,12 +151,12 @@ fn mutex() {
         });
     }
     thread::sleep(Duration::from_secs(1));
-    for _ in 0..1_000_000 {
-        black_box(atomic.lock().deref().clone());
+    for _ in 0..ITERATIONS {
+        black_box(atomic.lock().deref());
     }
     let now = Instant::now();
-    for _ in 0..1_000_000 {
-        black_box(atomic.lock().deref().clone());
+    for _ in 0..ITERATIONS {
+        black_box(atomic.lock().deref());
     }
     let elapsed = now.elapsed();
     println!("lock: {:?}", elapsed);
@@ -140,11 +178,11 @@ fn rwlock() {
         });
     }
     thread::sleep(Duration::from_secs(1));
-    for _ in 0..1_000_000 {
+    for _ in 0..ITERATIONS {
         black_box(atomic.read().clone());
     }
     let now = Instant::now();
-    for _ in 0..1_000_000 {
+    for _ in 0..ITERATIONS {
         black_box(atomic.read().clone());
     }
     let elapsed = now.elapsed();

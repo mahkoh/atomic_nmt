@@ -1,10 +1,14 @@
+use std::mem;
 use {
-    crate::rseq::{
-        cache_line::CacheLineAligned,
-        num_cpus::NUM_CPUS,
-        per_cpu_rc::{self, PerCpuRc},
-        per_cpu_thread::run_on_cpu,
-        rseq,
+    crate::nmt::{
+        inner::{
+            cache_line::CacheLineAligned,
+            num_cpus::NUM_CPUS,
+            per_cpu_rc::{self, PerCpuRc},
+            per_cpu_thread::run_on_cpu,
+            rseq::{self, get_rseq},
+        },
+        versioning::{Versioned, Versioning},
     },
     parking_lot::Mutex,
     std::{
@@ -18,9 +22,11 @@ use {
     },
 };
 
-pub struct Inner<T> {
+pub struct Inner<V: Versioning, T: Send + Sync> {
     /// The latest version of the stored value.
-    pub value: Mutex<T>,
+    pub value: Mutex<Versioned<V, T>>,
+    /// The numeric version of the value.
+    pub version: V::AtomicVersion,
     /// Usually true if and only if an update of the per-cpu value to the latest value has
     /// been schedule in the per-cpu thread.
     ///
@@ -36,20 +42,25 @@ pub struct Inner<T> {
     /// The per-cpu value. NOTE: Index `i` of this slice is only ever accessed by cpu `i` except
     /// in this types `Drop` implementation. Therefore, we don't ever have to use atomic operations
     /// while accessing it.
-    pub value_by_cpu: Box<[CacheLineAligned<Cell<*mut PerCpuRc<T>>>]>,
+    pub value_by_cpu: Box<[CacheLineAligned<Cell<*mut PerCpuRc<Versioned<V, T>>>>]>,
 }
 
-unsafe impl<T: Send + Sync + 'static> Send for Inner<T> {}
-unsafe impl<T: Send + Sync + 'static> Sync for Inner<T> {}
+unsafe impl<V: Versioning, T: Send + Sync + 'static> Send for Inner<V, T> {}
+unsafe impl<V: Versioning, T: Send + Sync + 'static> Sync for Inner<V, T> {}
 
-impl<T> Inner<T>
+impl<V, T> Inner<V, T>
 where
+    V: Versioning,
     T: Clone + Send + Sync + 'static,
 {
     pub fn new(value: T) -> Self {
         rseq::ensure_enabled();
         Self {
-            value: Mutex::new(value),
+            value: Mutex::new(Versioned {
+                version: V::new(),
+                value,
+            }),
+            version: V::new_atomic(),
             updating_cpu_value: iter::repeat_with(|| AtomicBool::new(true).into())
                 .take(*NUM_CPUS)
                 .collect(),
@@ -63,11 +74,19 @@ where
     }
 
     #[inline]
-    pub fn set(self: &Arc<Self>, value: T) {
-        *self.value.lock() = value;
+    pub fn set(self: &Arc<Self>, value: T) -> V::Version {
+        let _old;
+        let version = {
+            let mut lock = self.value.lock();
+            _old = mem::replace(&mut lock.value, value);
+            V::inc(&mut lock.version);
+            V::set(&self.version, lock.version);
+            lock.version
+        };
         for cpu_id in 0..*NUM_CPUS {
             self.update_cpu_value(cpu_id);
         }
+        version
     }
 
     /// Schedule an update of the CPU-local value. If an update is already scheduled, this
@@ -104,7 +123,7 @@ where
                 }
                 if !rc.is_null() {
                     unsafe {
-                        per_cpu_rc::release(&*rc);
+                        per_cpu_rc::release(get_rseq(), &*rc);
                     }
                 }
             }),
@@ -112,31 +131,40 @@ where
     }
 
     #[inline]
-    pub fn get(self: &Arc<Self>) -> T {
+    pub fn get(self: &Arc<Self>, bound: V::Version) -> Option<Versioned<V, T>> {
         unsafe {
-            let (cpu_id, rc) = per_cpu_rc::acquire(&self.value_by_cpu);
+            let rseq = get_rseq();
+            let (cpu_id, rc) = per_cpu_rc::acquire(rseq, &self.value_by_cpu);
             if let Some(rc) = rc {
-                let value = rc.value.clone();
-                per_cpu_rc::release(rc);
+                let mut value = None;
+                if V::is_above(rc.value.version, bound) {
+                    value = Some(rc.value.clone());
+                }
+                per_cpu_rc::release(rseq, rc);
                 return value;
             }
-            self.get_init(cpu_id)
+            self.get_init(cpu_id, bound)
         }
     }
 
     #[inline(never)]
     #[cold]
-    fn get_init(self: &Arc<Self>, cpu_id: usize) -> T {
+    fn get_init(self: &Arc<Self>, cpu_id: usize, bound: V::Version) -> Option<Versioned<V, T>> {
         if !self.cpu_init[cpu_id].swap(true, Relaxed) {
             self.updating_cpu_value[cpu_id].0.store(false, Relaxed);
             self.update_cpu_value(cpu_id);
         }
-        self.value.lock().clone()
+        let value = self.value.lock();
+        if V::is_above(value.version, bound) {
+            return Some(value.clone());
+        }
+        None
     }
 }
 
-impl<T> Drop for Inner<T> {
+impl<V: Versioning, T: Send + Sync> Drop for Inner<V, T> {
     fn drop(&mut self) {
+        let rseq = get_rseq();
         // SAFETY: The destructors of `Arc` synchronize with each other. For each
         // modification of the `value_by_cpu` array (in `update_cpu_value`), the `drop`
         // of the `Arc` though which the array was accessed happened after
@@ -149,7 +177,7 @@ impl<T> Drop for Inner<T> {
                 unsafe {
                     // SAFETY: We're releasing the reference owned by the `value_by_cpu`
                     // array.
-                    per_cpu_rc::release(&*value);
+                    per_cpu_rc::release(rseq, &*value);
                 }
             }
         }

@@ -1,5 +1,7 @@
 use {
-    crate::rseq::{abort_on_drop::AbortOnDrop, cache_line::CacheLineAligned, num_cpus::NUM_CPUS},
+    crate::nmt::inner::{
+        abort_on_drop::AbortOnDrop, cache_line::CacheLineAligned, num_cpus::NUM_CPUS,
+    },
     flume::{Receiver, Sender},
     once_cell::sync::Lazy,
     parking_lot::Mutex,

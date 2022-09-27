@@ -5,7 +5,7 @@ mod x86_64;
 
 use {
     crate::{
-        rseq::{
+        nmt::inner::{
             cache_line::CacheLineAligned,
             per_cpu_thread::run_on_cpu,
             rseq::{get_rseq, rseq},
@@ -119,9 +119,9 @@ extern "C" {
 /// previously returned by `new`.
 #[inline]
 pub unsafe fn acquire<T: Send + Sync>(
+    rseq: *mut rseq,
     data_by_cpu: &[CacheLineAligned<Cell<*mut PerCpuRc<T>>>],
 ) -> (usize, Option<&PerCpuRc<T>>) {
-    let rseq = get_rseq();
     // SAFETY: T and u8 are Sized. Therefore their pointers have compatible representations.
     let data_by_cpu: &[CacheLineAligned<Cell<*mut PerCpuRc<u8>>>] = mem::transmute(data_by_cpu);
     let (cpu_id, data) = lazy_atomic_acquire_thread_pointer(rseq, data_by_cpu);
@@ -143,10 +143,9 @@ pub unsafe fn acquire<T: Send + Sync>(
 ///
 /// The reference must be a pointer returned from `new` above.
 #[inline]
-pub unsafe fn release<T: Send + Sync>(data: &PerCpuRc<T>) {
+pub unsafe fn release<T: Send + Sync>(rseq: *mut rseq, data: &PerCpuRc<T>) {
     let cpu_id = data.cpu_id;
     let data = data as *const _ as *mut PerCpuRc<T>;
-    let rseq = get_rseq();
     let res = lazy_atomic_release_thread_pointer(rseq, data as _);
     if res != ALIVE {
         // We have to either deallocate the per-cpu data or retry the release.

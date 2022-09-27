@@ -58,8 +58,6 @@
 //!  *       [abort_ip]
 //!  *   F1. <failure>
 //!  */
-//!
-//!
 
 use std::{arch::asm, cell::Cell, ptr};
 
@@ -123,7 +121,7 @@ fn get_rseq_slow() -> *mut rseq {
 pub fn get_rseq() -> *mut rseq {
     let rseq = RSEQ.with(|thread_local| thread_local.get());
     if rseq.is_null() {
-        /// Initialize `RSEQ`.
+        // Initialize `RSEQ`.
         return get_rseq_slow();
     }
     rseq
