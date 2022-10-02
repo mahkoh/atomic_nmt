@@ -127,6 +127,13 @@ pub fn get_rseq() -> *mut rseq {
     rseq
 }
 
+#[inline(always)]
+pub fn get_cpu() -> usize {
+    unsafe {
+        (*get_rseq()).cpu_id as _
+    }
+}
+
 /// Checks if rseq support is available in the main thread of the process. Does not mean
 /// that rseq support is available in other threads. For example, seccomp might have
 /// prevented registration in non-main threads. We don't handle such situations.

@@ -1,8 +1,13 @@
 #![allow(unused_doc_comments)]
 
-#[cfg(target_arch = "x86_64")]
-mod x86_64;
+cfg_if! {
+    if #[cfg(target_arch = "x86_64")] {
+        #[path = "x86_64.rs"]
+        pub(crate) mod arch;
+    }
+}
 
+pub use arch::acquire;
 use {
     crate::{
         nmt::inner::{
@@ -12,7 +17,8 @@ use {
         },
         stats::NUM_OFF_CPU_RELEASE,
     },
-    std::{cell::Cell, mem, sync::atomic::Ordering::Relaxed},
+    cfg_if::cfg_if,
+    std::sync::atomic::Ordering::Relaxed,
 };
 
 /// A reference to a value that is owned by a single CPU.
@@ -49,87 +55,6 @@ const DEAD: u64 = 1;
 #[allow(dead_code)]
 const OFF_CPU: u64 = 2;
 
-// Extern functions written in platform-specific assembly.
-extern "C" {
-    /// This function is essentially
-    ///
-    /// ```no_run
-    /// use std::cell::Cell;
-    /// unsafe extern fn lazy_atomic_acquire_thread_pointer(
-    ///     rseq: *mut rseq,
-    ///     data_by_cpu: &[CacheLineAligned<Cell<*mut PerCpuRc<u8>>>],
-    /// ) -> (u32, *mut PerCpuRc<u8>) {
-    ///     let cpu = (*rseq).cpu_id;
-    ///     let data = *data_by_cpu.get_unchecked(cpu as usize).0.get();
-    ///     if !data.is_null() {
-    ///         (*data).rc += 1;
-    ///     }
-    ///     (cpu, data)
-    /// }
-    /// ```
-    ///
-    /// However, it guarantees that the entire function body is executed without interruption, that
-    /// is, without the thread being moved to a different cpu, without a signal being caught, without
-    /// the thread being rescheduled, etc.
-    ///
-    /// Returns the id of the cpu it ran on and an owned reference to the per-cpu data of that cpu.
-    /// The reference is null if the corresponding pointer in the slice was null.
-    fn lazy_atomic_acquire_thread_pointer(
-        rseq: *mut rseq,
-        data_by_cpu: &[CacheLineAligned<Cell<*mut PerCpuRc<u8>>>],
-    ) -> (u32, *mut PerCpuRc<u8>);
-
-    /// This function is essentially the following but with the same guarantees as above.
-    ///
-    /// ```
-    /// unsafe extern fn lazy_atomic_release_thread_pointer(
-    ///     rseq: *mut rseq,
-    ///     data: *mut PerCpuRc<u8>,
-    /// ) -> u64 {
-    ///     let cpu = (*rseq).cpu_id;
-    ///     let mut res = OFF_CPU;
-    ///     if cpu == (*data).cpu_id {
-    ///         res = ALIVE;
-    ///         if (*data).rc == 1 {
-    ///             res = DEAD;
-    ///         }
-    ///         (*data).rc -= 1;
-    ///     }
-    ///     res
-    /// }
-    /// ```
-    ///
-    /// Returns one of `OFF_CPU`, `ALIVE`, `DEAD`. The meaning of these return values is documented
-    /// above.
-    fn lazy_atomic_release_thread_pointer(rseq: *mut rseq, data_by_cpu: *const PerCpuRc<u8>)
-        -> u64;
-}
-
-//////////////////////////////////////
-// ACQUIRE
-//////////////////////////////////////
-
-/// Acquires a reference to per-cpu data.
-///
-/// # Safety
-///
-/// The length of the slice must be larger than the largest possible cpu id.
-///
-/// The pointers stored in the slice must either be null or valid pointers that were
-/// previously returned by `new`.
-#[inline]
-pub unsafe fn acquire<T: Send + Sync>(
-    rseq: *mut rseq,
-    data_by_cpu: &[CacheLineAligned<Cell<*mut PerCpuRc<T>>>],
-) -> (usize, Option<&PerCpuRc<T>>) {
-    // SAFETY: T and u8 are Sized. Therefore their pointers have compatible representations.
-    let data_by_cpu: &[CacheLineAligned<Cell<*mut PerCpuRc<u8>>>] = mem::transmute(data_by_cpu);
-    let (cpu_id, data) = lazy_atomic_acquire_thread_pointer(rseq, data_by_cpu);
-    // SAFETY: data is one of the pointers stored in data_by_cpu.
-    let data: Option<&PerCpuRc<T>> = mem::transmute(data);
-    (cpu_id as _, data)
-}
-
 //////////////////////////////////////
 // RELEASE
 //////////////////////////////////////
@@ -145,11 +70,11 @@ pub unsafe fn acquire<T: Send + Sync>(
 #[inline]
 pub unsafe fn release<T: Send + Sync>(rseq: *mut rseq, data: &PerCpuRc<T>) {
     let cpu_id = data.cpu_id;
-    let data = data as *const _ as *mut PerCpuRc<T>;
-    let res = lazy_atomic_release_thread_pointer(rseq, data as _);
+    let data = data as *const _ as _;
+    let res = arch::release(rseq, data);
     if res != ALIVE {
         // We have to either deallocate the per-cpu data or retry the release.
-        release_slow(res, cpu_id, data);
+        release_slow::<T>(res, cpu_id, data);
     }
 }
 
@@ -181,7 +106,7 @@ unsafe fn release_off_cpu<T: Send + Sync>(cpu_id: u32, data: *mut PerCpuRc<T>) {
             // would be undefined. We could use atomic operations but that would be slower than
             // using rseq.
             let rseq = get_rseq();
-            let res = lazy_atomic_release_thread_pointer(rseq, data as _);
+            let res = arch::release(rseq, data);
             if res == DEAD {
                 drop(Box::from_raw(data));
             } else {

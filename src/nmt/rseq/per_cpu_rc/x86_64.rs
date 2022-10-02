@@ -1,109 +1,120 @@
-use std::arch::global_asm;
+use {
+    crate::nmt::inner::{cache_line::CacheLineAligned, per_cpu_rc::PerCpuRc, rseq::rseq},
+    std::{arch::asm, cell::Cell},
+};
 
-//////////////////////////////////////
-// ACQUIRE
-//////////////////////////////////////
-
-// language=asm
-global_asm!(
-    r#"
-    .global lazy_atomic_acquire_thread_pointer
-	.section .text.lazy_atomic_acquire_thread_pointer,"x",@progbits
-	.align 32
-lazy_atomic_acquire_thread_pointer:
-    leaq lazy_atomic_acquire_thread_pointer_rseq_cs(%rip), %rax     # %rax = &lazy_atomic_acquire_thread_pointer_rseq_cs
-    movq %rax, 8(%rdi)                                              # rseq.rseq_cs = %rax
-lazy_atomic_acquire_thread_pointer_start_ip:
-    movl 4(%rdi), %eax                                              # %rax = rseq.cpu_id
-    movq %rax, %rcx                                                 # %rcx = %rax
-    shlq $6, %rcx                                                   # %rcx *= 64;
-    movq (%rsi,%rcx), %rdx                                          # %rdx = data_by_cpu[%rax].get()
-    testq %rdx, %rdx                                                # test %rdx == null
-    je lazy_atomic_acquire_thread_pointer_post_commit_ip            # if true: jump to return
-    incq (%rdx)                                                     # %rdx.rc += 1
-lazy_atomic_acquire_thread_pointer_post_commit_ip:
-    retq                                                            # return (%rax, %rdx)
+/// ```no_run
+/// use std::cell::Cell;
+/// unsafe fn acquire(
+///     rseq: *mut rseq,
+///     data_by_cpu: &[CacheLineAligned<Cell<*mut PerCpuRc<u8>>>],
+/// ) -> &PerCpuRc<u8> {
+///     let cpu = (*rseq).cpu_id;
+///     let data = &mut **data_by_cpu.get_unchecked(cpu as usize).0.get();
+///     data.rc += 1;
+///     data
+/// }
+/// ```
+#[inline]
+pub unsafe fn acquire<T: Send + Sync>(
+    rseq: *mut rseq,
+    data_by_cpu: &[CacheLineAligned<Cell<*mut PerCpuRc<T>>>],
+) -> &PerCpuRc<T> {
+    let data: *const PerCpuRc<T>;
+    asm!(
+        r#"
+1:
+    leaq 5f(%rip), {data}
+    movq {data}, 8({rseq})
+2:
+    movl 4({rseq}), {data:e}
+    shlq $6, {data}
+    movq ({data_by_cpu},{data}), {data}
+    incq ({data})
+3:
+    jmp 6f
 
     # Magic number that must appear immediately before abort_ip. This value is set by glibc
     # when it registers the rseq structure with the kernel. See glibc/sysdeps/unix/sysv/linux/x86/bits/rseq.h
     .ascii "\x0f\xb9\x3d\x53\x30\x05\x53"
-lazy_atomic_acquire_thread_pointer_abort_ip:
-    jmp lazy_atomic_acquire_thread_pointer
-    .size lazy_atomic_acquire_thread_pointer, . - lazy_atomic_acquire_thread_pointer
-"#,
-    options(att_syntax)
-);
+4:
+    jmp 1b
 
-/// ```
-/// static lazy_atomic_acquire_thread_pointer_rseq_cs: rseq_cs = rseq_cs { ... };
-/// ```
-// language=asm
-global_asm!(
-    r#"
-	.section .rodata.lazy_atomic_acquire_thread_pointer_rseq_cs,"a",@progbits
-	.align 32
-lazy_atomic_acquire_thread_pointer_rseq_cs:
+5:
     .long 0
     .long 0
-    .quad lazy_atomic_acquire_thread_pointer_start_ip
-    .quad lazy_atomic_acquire_thread_pointer_post_commit_ip - lazy_atomic_acquire_thread_pointer_start_ip
-    .quad lazy_atomic_acquire_thread_pointer_abort_ip
+    .quad 2b
+    .quad 3b - 2b
+    .quad 4b
 
+6:
 "#,
-    options(att_syntax)
-);
+        rseq = in(reg) rseq,
+        data_by_cpu = in(reg) data_by_cpu.as_ptr(),
+        data = out(reg) data,
+        options(att_syntax),
+    );
+    &*data
+}
 
-//////////////////////////////////////
-// RELEASE
-//////////////////////////////////////
-
-// language=asm
-global_asm!(
-    r#"
-    .global lazy_atomic_release_thread_pointer
-	.section .text.lazy_atomic_release_thread_pointer,"x",@progbits
-	.align 32
-lazy_atomic_release_thread_pointer:
-    leaq lazy_atomic_release_thread_pointer_rseq_cs(%rip), %rax     # %rax = &lazy_atomic_release_thread_pointer_rseq_cs
-    movq %rax, 8(%rdi)                                              # rseq.rseq_cs = %rax
-lazy_atomic_release_thread_pointer_start_ip:
-    movl 4(%rdi), %ecx                                              # %rcx = rseq.cpu_id
-    movl $2, %eax                                                   # %rax = OFF_CPU
-    cmpl 8(%rsi), %ecx                                              # test %rcx == data.cpu_id
-    jne lazy_atomic_release_thread_pointer_post_commit_ip           # if false: jump to return
-    movq (%rsi), %rcx                                               # %rcx = data.rc
-    xorl %eax, %eax                                                 # %rax = ALIVE
-    cmpq $1, %rcx                                                   # test %rcx == 1
-    sete %al                                                        # if true: %rax = DEAD
-    decq %rcx                                                       # %rcx -= 1
-    movq %rcx, (%rsi)                                               # data.rc = %rcx
-lazy_atomic_release_thread_pointer_post_commit_ip:
-    retq                                                            # return %rax
+/// ```
+/// unsafe fn release(
+///     rseq: *mut rseq,
+///     data: *mut PerCpuRc<u8>,
+/// ) -> u64 {
+///     let cpu = (*rseq).cpu_id;
+///     let mut res = OFF_CPU;
+///     if cpu == (*data).cpu_id {
+///         res = ALIVE;
+///         if (*data).rc == 1 {
+///             res = DEAD;
+///         }
+///         (*data).rc -= 1;
+///     }
+///     res
+/// }
+/// ```
+#[inline]
+pub unsafe fn release<T: Send + Sync>(rseq: *mut rseq, data: *mut PerCpuRc<T>) -> u64 {
+    let res: u64;
+    asm!(
+        r#"
+1:
+    leaq 5f(%rip), {tmp}
+    movq {tmp}, 8({rseq})
+2:
+    movl 4({rseq}), {tmp:e}
+    movl $2, {res:e}
+    cmpl 8({data}), {tmp:e}
+    jne 6f
+    movq ({data}), {tmp}
+    xorl {res:e}, {res:e}
+    cmpq $1, {tmp}
+    sete {res:l}
+    decq {tmp}
+    movq {tmp}, ({data})
+3:
+    jmp 6f
 
     # See above.
     .ascii "\x0f\xb9\x3d\x53\x30\x05\x53"
-lazy_atomic_release_thread_pointer_abort_ip:
-    jmp lazy_atomic_release_thread_pointer
-    .size lazy_atomic_release_thread_pointer, . - lazy_atomic_release_thread_pointer
-"#,
-    options(att_syntax)
-);
+4:
+    jmp 1b
 
-/// ```
-/// static lazy_atomic_release_thread_pointer_rseq_cs: rseq_cs = rseq_cs { ... };
-/// ```
-// language=asm
-global_asm!(
-    r#"
-	.section .rodata.lazy_atomic_release_thread_pointer_rseq_cs,"a",@progbits
-	.align 32
-lazy_atomic_release_thread_pointer_rseq_cs:
+5:
     .long 0
     .long 0
-    .quad lazy_atomic_release_thread_pointer_start_ip
-    .quad lazy_atomic_release_thread_pointer_post_commit_ip - lazy_atomic_release_thread_pointer_start_ip
-    .quad lazy_atomic_release_thread_pointer_abort_ip
+    .quad 2b
+    .quad 3b - 2b
+    .quad 4b
 
+6:
 "#,
-    options(att_syntax)
-);
+        rseq = in(reg) rseq,
+        data = in(reg) data,
+        tmp = out(reg) _,
+        res = out(reg) res,
+        options(att_syntax)
+    );
+    res
+}

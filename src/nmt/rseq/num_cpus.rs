@@ -1,6 +1,6 @@
 use {once_cell::sync::Lazy, std::str::FromStr};
 
-const PATH: &str = "/sys/devices/system/cpu/possible";
+const PATH: &str = "/sys/devices/system/cpu/online";
 
 /// Computes the highest possible index of a CPU in this system plus 1.
 ///

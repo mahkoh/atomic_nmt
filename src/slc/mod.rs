@@ -5,6 +5,7 @@ use {
     },
     std::sync::{atomic::Ordering::Relaxed, Arc},
 };
+use crate::nmt::inner::get_cpu;
 
 #[derive(Clone)]
 pub struct AtomicSlc<T: Send + Sync> {
@@ -34,22 +35,13 @@ where
         }
     }
 
-    fn maybe_update(&mut self) {
-        if self.inner.version.load(Relaxed) <= self.cached.version {
-            return;
-        }
-        // self.cached = self.inner.value.lock().clone();
-        // if let Some(versioned) = self.inner.get(self.cached.version) {
-        //     self.cached = versioned;
-        // }
-        self.maybe_update_slow();
-    }
-
     pub fn get(&mut self) -> &T {
-        if self.inner.version.load(Relaxed) > self.cached.version {
-            self.maybe_update_slow();
+        unsafe {
+            if self.inner.version_by_cpu.get_unchecked(get_cpu()).0.load(Relaxed) > self.cached.version {
+                // println!("updated");
+                self.maybe_update_slow();
+            }
         }
-        // self.maybe_update();
         &self.cached.value
     }
 
