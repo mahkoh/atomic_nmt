@@ -1,3 +1,4 @@
+use std::sync::atomic::AtomicUsize;
 use {
     crate::nmt::{
         inner::Inner,
@@ -38,7 +39,8 @@ where
     pub fn get(&mut self) -> &T {
         unsafe {
             if self.inner.version_by_cpu.get_unchecked(get_cpu()).0.load(Relaxed) > self.cached.version {
-                // println!("updated");
+                // static COUNT: AtomicUsize = AtomicUsize::new(1);
+                // println!("updated {}", COUNT.fetch_add(1, Relaxed));
                 self.maybe_update_slow();
             }
         }

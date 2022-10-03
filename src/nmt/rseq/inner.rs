@@ -24,9 +24,7 @@ use {
 
 pub struct Inner<V: Versioning, T: Send + Sync> {
     /// The latest version of the stored value.
-    pub value: Mutex<Versioned<V, T>>,
-    /// The numeric version of the value.
-    pub version: CacheLineAligned<V::AtomicVersion>,
+    pub value: CacheLineAligned<Mutex<Versioned<V, T>>>,
     /// Usually true if and only if an update of the per-cpu value to the latest value has
     /// been schedule in the per-cpu thread.
     ///
@@ -59,8 +57,7 @@ where
             value: value.clone(),
         };
         Self {
-            value: Mutex::new(value.clone()),
-            version: V::new_atomic().into(),
+            value: Mutex::new(value.clone()).into(),
             updating_cpu_value: iter::repeat_with(|| AtomicBool::new(false).into())
                 .take(*NUM_CPUS)
                 .collect(),
@@ -75,10 +72,10 @@ where
     pub fn set(self: &Arc<Self>, value: T) -> V::Version {
         let _old;
         let version = {
-            let mut lock = self.value.lock();
+            let mut lock = self.value.0.lock();
             _old = mem::replace(&mut lock.value, value);
             V::inc(&mut lock.version);
-            V::set(&self.version.0, lock.version);
+            // V::set(&self.version.0, lock.version);
             lock.version
         };
         for cpu_id in 0..*NUM_CPUS {
@@ -105,7 +102,7 @@ where
             cpu_id,
             Box::new(move || {
                 inner.updating_cpu_value[cpu_id].0.store(false, Relaxed);
-                let value = inner.value.lock().clone();
+                let value = inner.value.0.lock().clone();
                 let version = value.version;
                 let mut rc = per_cpu_rc::new(cpu_id as _, value);
                 unsafe {

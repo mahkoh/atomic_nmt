@@ -3,6 +3,7 @@
 use std::ptr;
 use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::atomic::Ordering::Relaxed;
+use rand::{Rng, thread_rng};
 use {
     crossbeam::atomic::AtomicCell,
     lazy_atomic::{stats::num_off_cpu_release, AtomicNmt, AtomicSlc},
@@ -17,12 +18,15 @@ use {
         time::{Duration, Instant, SystemTime},
     },
 };
+use lazy_atomic::{run_on_cpu, set_priority};
 
 fn main() {
+    // set_priority(1);
+
     // crossbeam();
+    // atomic_slc();
+    mutex_slc();
     // atomic_nmt();
-    atomic_slc();
-    // mutex_slc();
     // mutex();
     // rwlock();
 }
@@ -31,23 +35,44 @@ macro_rules! value {
     () => {
         // "hello world".to_owned()
         // SystemTime::now()
-        // Arc::new(1)
+        Arc::new(1)
         // Arc::new(SystemTime::now())
         // Arc::new("hello world".to_owned())
-        [1u64; 1]
+        // [1u64; 1]
     };
 }
 
-const ITERATIONS: usize = 1_000_000;
+const ITERATIONS: usize = 1_000_000_000;
 
 const NUM_READERS: usize = 0;
-const NUM_WRITERS: usize = 7;
-const NOPS_AFTER_WRITE: usize = 0;
+const NUM_WRITERS: usize = 1;
+const NOPS_AFTER_WRITE: usize = 1;
+
+/*
+mutex:                 atomic:
+    1: 1.5ns               3.0ns
+    2: 3.2ns               3.0ns
+    3: 7.6ns               3.2ns
+    4: 11.0ns               3.2ns
+    // 5: 11.2ns               3.1ns
+    // 6: 11.4ns              3.2ns
+    // 7: 13.4ns              3.0ns
+    8: 13.5ns               3.2ns
+    // 9: 12.5ns              3.2ns
+    // 10: 13.7ns             3.1ns
+    // 11: 13.4ns             3.0ns
+    16: 13.8ns             3.1ns
+    32: 19.0ns
+    64: 17.5ns
+    128: 21.5ns
+    256: 21.4ns
+    1024: 18.6ns
+ */
 
 fn nops() {
     // thread::sleep(Duration::from_micros(10));
     // thread::yield_now();
-    for _ in 0..NOPS_AFTER_WRITE {
+    for _ in 0..thread_rng().gen_range(0..2 * NOPS_AFTER_WRITE) {
         unsafe {
             asm!("");
         }
@@ -94,12 +119,11 @@ fn atomic_slc() {
     for _ in 0..NUM_WRITERS {
         let mut atomic = atomic.clone();
         thread::spawn(move || loop {
-            set_priority(1);
             atomic.set(value!());
             nops();
         });
     }
-    set_priority(99);
+    // set_priority(1);
     thread::sleep(Duration::from_secs(1));
     // for _ in 0..ITERATIONS {
     //     black_box(atomic.get());
@@ -151,9 +175,12 @@ fn mutex() {
     }
     for _ in 0..NUM_WRITERS {
         let atomic = atomic.clone();
-        thread::spawn(move || loop {
-            let _v = mem::replace(atomic.lock().deref_mut(), value!());
-            nops();
+        thread::spawn(move || {
+            set_priority(1);
+            loop {
+                let _v = mem::replace(atomic.lock().deref_mut(), value!());
+                nops();
+            }
         });
     }
     thread::sleep(Duration::from_secs(1));
@@ -212,15 +239,17 @@ fn mutex_slc() {
     }
     for _ in 0..NUM_WRITERS {
         let inner = inner.clone();
-        thread::spawn(move || loop {
+        thread::spawn(move || {
             set_priority(1);
-            let _old;
-            {
-                let mut lock = inner.value.lock();
-                _old = mem::replace(lock.deref_mut(), value!());
-                inner.version.store(inner.version.load(Relaxed) + 1, Relaxed);
+            loop {
+                let _old;
+                {
+                    let mut lock = inner.value.lock();
+                    _old = mem::replace(lock.deref_mut(), value!());
+                    inner.version.store(inner.version.load(Relaxed) + 1, Relaxed);
+                }
+                nops();
             }
-            nops();
         });
     }
     let mut outer = Outer {
@@ -228,11 +257,11 @@ fn mutex_slc() {
         version: 0,
         inner: inner.clone(),
     };
-    set_priority(99);
+    set_priority(1);
     thread::sleep(Duration::from_secs(1));
-    for _ in 0..ITERATIONS {
-        black_box(outer.get());
-    }
+    // for _ in 0..ITERATIONS {
+    //     black_box(outer.get());
+    // }
     let now = Instant::now();
     for _ in 0..ITERATIONS {
         // println!("{:?}", outer.get());
@@ -267,14 +296,4 @@ fn rwlock() {
     }
     let elapsed = now.elapsed();
     println!("lock: {:?}", elapsed);
-}
-
-fn set_priority(p: i32) {
-    unsafe {
-        let param = libc::sched_param {
-            sched_priority: p as _,
-        };
-        let res = libc::sched_setscheduler(0, libc::SCHED_FIFO, &param);
-        assert_eq!(res, 0);
-    }
 }

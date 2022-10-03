@@ -17,13 +17,13 @@
   <component name="ChangeListManager">
     <list default="true" id="fcb517fc-07ce-4b71-9aec-274beef04e31" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/examples/bench_arc.rs" beforeDir="false" afterPath="$PROJECT_DIR$/examples/bench_arc.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nmt/rseq/inner.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/nmt/rseq/inner.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/nmt/rseq/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/nmt/rseq/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nmt/rseq/num_cpus.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/nmt/rseq/num_cpus.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nmt/rseq/per_cpu_rc/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/nmt/rseq/per_cpu_rc/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nmt/rseq/per_cpu_rc/x86_64.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/nmt/rseq/per_cpu_rc/x86_64.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/nmt/rseq/rseq.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/nmt/rseq/rseq.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/nmt/rseq/per_cpu_thread.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/nmt/rseq/per_cpu_thread.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/slc/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/slc/mod.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

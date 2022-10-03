@@ -8,5 +8,5 @@ mod cache_line;
 mod inner;
 mod num_cpus;
 mod per_cpu_rc;
-mod per_cpu_thread;
+pub mod per_cpu_thread;
 mod rseq;

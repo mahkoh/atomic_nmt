@@ -7,6 +7,7 @@ use {
     parking_lot::Mutex,
     std::{mem, thread},
 };
+use crate::set_priority;
 
 const BITS_PER_USIZE: usize = mem::size_of::<usize>() * 8;
 
@@ -31,6 +32,8 @@ fn sched_setaffinity(pid: libc::pid_t, mask: &[usize]) {
 }
 
 fn cpu_thread(cpu: usize, rx: Receiver<GcTask>) {
+    // set_priority(1);
+
     // Not strictly necessary but we'll OOM if the thread dies anyway.
     let _abort = AbortOnDrop;
 
