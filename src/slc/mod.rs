@@ -31,14 +31,12 @@ where
     #[cold]
     fn maybe_update_slow(&mut self) {
         // self.cached = self.inner.value.lock().clone();
-        if let Some(versioned) = self.inner.get(self.cached.version) {
-            self.cached = versioned;
-        }
+        self.cached = self.inner.get();
     }
 
     pub fn get(&mut self) -> &T {
         unsafe {
-            if self.inner.version_by_cpu.get_unchecked(get_cpu()).0.load(Relaxed) > self.cached.version {
+            if self.inner.version.0.load(Relaxed) > self.cached.version {
                 // static COUNT: AtomicUsize = AtomicUsize::new(1);
                 // println!("updated {}", COUNT.fetch_add(1, Relaxed));
                 self.maybe_update_slow();

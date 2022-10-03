@@ -1,3 +1,4 @@
+use std::sync::atomic::AtomicPtr;
 use {
     crate::nmt::inner::{cache_line::CacheLineAligned, per_cpu_rc::PerCpuRc, rseq::rseq},
     std::{arch::asm, cell::Cell},
@@ -18,7 +19,7 @@ use {
 #[inline]
 pub unsafe fn acquire<T: Send + Sync>(
     rseq: *mut rseq,
-    data_by_cpu: &[CacheLineAligned<Cell<*mut PerCpuRc<T>>>],
+    data_by_cpu: &[CacheLineAligned<AtomicPtr<PerCpuRc<T>>>],
 ) -> &PerCpuRc<T> {
     let data: *const PerCpuRc<T>;
     asm!(

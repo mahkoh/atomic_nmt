@@ -24,8 +24,8 @@ fn main() {
     // set_priority(1);
 
     // crossbeam();
-    // atomic_slc();
-    mutex_slc();
+    atomic_slc();
+    // mutex_slc();
     // atomic_nmt();
     // mutex();
     // rwlock();
@@ -35,17 +35,17 @@ macro_rules! value {
     () => {
         // "hello world".to_owned()
         // SystemTime::now()
-        Arc::new(1)
+        // Arc::new(1)
         // Arc::new(SystemTime::now())
         // Arc::new("hello world".to_owned())
-        // [1u64; 1]
+        [1u64; 1]
     };
 }
 
-const ITERATIONS: usize = 1_000_000_000;
+const ITERATIONS: usize = 1_000_000;
 
 const NUM_READERS: usize = 0;
-const NUM_WRITERS: usize = 1;
+const NUM_WRITERS: usize = 7;
 const NOPS_AFTER_WRITE: usize = 1;
 
 /*

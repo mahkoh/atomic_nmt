@@ -6,7 +6,8 @@ pub trait Versioning: 'static {
 
     fn new() -> Self::Version;
     fn new_atomic() -> Self::AtomicVersion;
-    fn inc(version: &mut Self::Version);
+    fn inc(version: Self::Version) -> Self::Version;
+    fn get(version: &Self::AtomicVersion) -> Self::Version;
     fn set(atomic: &Self::AtomicVersion, version: Self::Version);
     fn is_above(value: Self::Version, bound: Self::Version) -> bool;
 }
@@ -26,9 +27,10 @@ impl Versioning for VersioningNone {
     }
 
     #[inline(always)]
-    fn inc(_version: &mut Self::Version) {
-        // nothing
+    fn inc(_version: Self::Version) -> Self::Version {
+        ()
     }
+
     #[inline(always)]
     fn set(_atomic: &Self::AtomicVersion, _version: Self::Version) {
         // nothing
@@ -37,6 +39,10 @@ impl Versioning for VersioningNone {
     #[inline(always)]
     fn is_above(_value: Self::Version, _bound: Self::Version) -> bool {
         true
+    }
+
+    fn get(version: &Self::AtomicVersion) -> Self::Version {
+        ()
     }
 }
 
@@ -55,8 +61,8 @@ impl Versioning for VersioningU64 {
     }
 
     #[inline(always)]
-    fn inc(version: &mut Self::Version) {
-        *version += 1;
+    fn inc(version: Self::Version) -> Self::Version {
+        version + 1
     }
 
     #[inline(always)]
@@ -64,8 +70,14 @@ impl Versioning for VersioningU64 {
         atomic.store(version, Relaxed);
     }
 
+    #[inline(always)]
     fn is_above(value: Self::Version, bound: Self::Version) -> bool {
         value > bound
+    }
+
+    #[inline(always)]
+    fn get(version: &Self::AtomicVersion) -> Self::Version {
+        version.load(Relaxed)
     }
 }
 

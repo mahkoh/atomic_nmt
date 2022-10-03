@@ -79,7 +79,7 @@ where
     #[inline]
     pub fn get(&self) -> T {
         unsafe {
-            self.inner.get(()).unwrap_unchecked().value
+            self.inner.get().value
         }
     }
 }
