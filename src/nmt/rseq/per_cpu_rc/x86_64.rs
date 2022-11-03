@@ -1,17 +1,17 @@
-use std::sync::atomic::AtomicPtr;
 use {
     crate::nmt::inner::{cache_line::CacheLineAligned, per_cpu_rc::PerCpuRc, rseq::rseq},
-    std::{arch::asm, cell::Cell},
+    std::{arch::asm, sync::atomic::AtomicPtr},
 };
 
 /// ```no_run
-/// use std::cell::Cell;
+/// use std::sync::atomic::AtomicPtr;
+/// use std::sync::atomic::Ordering::Acquire;
 /// unsafe fn acquire(
 ///     rseq: *mut rseq,
-///     data_by_cpu: &[CacheLineAligned<Cell<*mut PerCpuRc<u8>>>],
+///     data_by_cpu: &[CacheLineAligned<AtomicPtr<PerCpuRc<u8>>>],
 /// ) -> &PerCpuRc<u8> {
 ///     let cpu = (*rseq).cpu_id;
-///     let data = &mut **data_by_cpu.get_unchecked(cpu as usize).0.get();
+///     let data = &mut *data_by_cpu.get_unchecked(cpu as usize).0.load(Acquire);
 ///     data.rc += 1;
 ///     data
 /// }

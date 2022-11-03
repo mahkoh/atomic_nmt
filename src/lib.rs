@@ -3,8 +3,10 @@
 //!
 //! [ec]: https://en.wikipedia.org/wiki/Eventual_consistency
 
-pub use {nmt::AtomicNmt, slc::AtomicSlc};
-pub use nmt::inner::per_cpu_thread::run_on_cpu;
+pub use {
+    nmt::{inner::per_cpu_thread::run_on_cpu, AtomicNmt},
+    slc::AtomicSlc,
+};
 
 mod nmt;
 mod slc;

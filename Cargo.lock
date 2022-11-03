@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "arc-swap"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "983cd8b9d4b02a6dc6ffa557262eb5858a27a0038ffffe21a0f133eaa819a164"
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -146,6 +152,7 @@ dependencies = [
 name = "lazy-atomic"
 version = "0.1.0"
 dependencies = [
+ "arc-swap",
  "cfg-if",
  "crossbeam",
  "flume",

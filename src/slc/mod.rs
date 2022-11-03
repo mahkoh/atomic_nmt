@@ -1,4 +1,3 @@
-use std::sync::atomic::AtomicUsize;
 use {
     crate::nmt::{
         inner::Inner,
@@ -6,7 +5,6 @@ use {
     },
     std::sync::{atomic::Ordering::Relaxed, Arc},
 };
-use crate::nmt::inner::get_cpu;
 
 #[derive(Clone)]
 pub struct AtomicSlc<T: Send + Sync> {
@@ -35,19 +33,15 @@ where
     }
 
     pub fn get(&mut self) -> &T {
-        unsafe {
-            if self.inner.version.0.load(Relaxed) > self.cached.version {
-                // static COUNT: AtomicUsize = AtomicUsize::new(1);
-                // println!("updated {}", COUNT.fetch_add(1, Relaxed));
-                self.maybe_update_slow();
-            }
+        if self.inner.version.0.load(Relaxed) > self.cached.version {
+            // static COUNT: AtomicUsize = AtomicUsize::new(1);
+            // println!("updated {}", COUNT.fetch_add(1, Relaxed));
+            self.maybe_update_slow();
         }
         &self.cached.value
     }
 
     pub fn set(&mut self, value: T) {
-        let version = self.inner.set(value.clone());
-        self.cached.value = value;
-        self.cached.version = version;
+        self.inner.set(value.clone());
     }
 }

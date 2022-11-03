@@ -7,7 +7,6 @@ use {
     parking_lot::Mutex,
     std::{mem, thread},
 };
-use crate::set_priority;
 
 const BITS_PER_USIZE: usize = mem::size_of::<usize>() * 8;
 

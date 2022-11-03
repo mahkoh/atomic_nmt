@@ -1,30 +1,32 @@
 #![feature(bench_black_box)]
 
-use std::ptr;
-use std::sync::atomic::{AtomicBool, AtomicU64};
-use std::sync::atomic::Ordering::Relaxed;
-use rand::{Rng, thread_rng};
+use arc_swap::ArcSwap;
 use {
     crossbeam::atomic::AtomicCell,
-    lazy_atomic::{stats::num_off_cpu_release, AtomicNmt, AtomicSlc},
+    lazy_atomic::{run_on_cpu, set_priority, stats::num_off_cpu_release, AtomicNmt, AtomicSlc},
     parking_lot::{Mutex, RwLock},
+    rand::{thread_rng, Rng},
     std::{
         arch::asm,
         hint::black_box,
         mem,
         ops::{Deref, DerefMut},
-        sync::Arc,
+        ptr,
+        sync::{
+            atomic::{AtomicBool, AtomicU64, Ordering::Relaxed},
+            Arc,
+        },
         thread,
         time::{Duration, Instant, SystemTime},
     },
 };
-use lazy_atomic::{run_on_cpu, set_priority};
 
 fn main() {
     // set_priority(1);
 
     // crossbeam();
     atomic_slc();
+    // arc_swap();
     // mutex_slc();
     // atomic_nmt();
     // mutex();
@@ -42,7 +44,7 @@ macro_rules! value {
     };
 }
 
-const ITERATIONS: usize = 1_000_000;
+const ITERATIONS: usize = 1_000_000_000;
 
 const NUM_READERS: usize = 0;
 const NUM_WRITERS: usize = 7;
@@ -84,7 +86,7 @@ fn atomic_nmt() {
     for _ in 0..NUM_READERS {
         let atomic = atomic.clone();
         thread::spawn(move || loop {
-            atomic.get();
+            black_box(atomic.get());
         });
     }
     for _ in 0..NUM_WRITERS {
@@ -95,9 +97,10 @@ fn atomic_nmt() {
         });
     }
     thread::sleep(Duration::from_secs(1));
-    for _ in 0..ITERATIONS {
-        black_box(atomic.get());
-    }
+    // for _ in 0..ITERATIONS {
+    //     black_box(atomic.get());
+    // }
+    set_priority(1);
     let now = Instant::now();
     for _ in 0..ITERATIONS {
         // println!("{:?}", atomic.get());
@@ -113,12 +116,13 @@ fn atomic_slc() {
     for _ in 0..NUM_READERS {
         let mut atomic = atomic.clone();
         thread::spawn(move || loop {
-            atomic.get();
+            black_box(atomic.get());
         });
     }
     for _ in 0..NUM_WRITERS {
         let mut atomic = atomic.clone();
         thread::spawn(move || loop {
+            // set_priority(1);
             atomic.set(value!());
             nops();
         });
@@ -138,6 +142,36 @@ fn atomic_slc() {
     println!("off-cpu releases: {}", num_off_cpu_release());
 }
 
+fn arc_swap() {
+    let mut atomic = arc_swap::cache::Cache::new(Arc::new(ArcSwap::new(value!())));
+    for _ in 0..NUM_READERS {
+        let mut atomic = atomic.clone();
+        thread::spawn(move || loop {
+            black_box(atomic.load());
+        });
+    }
+    for _ in 0..NUM_WRITERS {
+        let mut atomic = atomic.clone();
+        thread::spawn(move || loop {
+            // set_priority(1);
+            atomic.arc_swap().store(value!());
+            nops();
+        });
+    }
+    set_priority(1);
+    thread::sleep(Duration::from_secs(1));
+    // for _ in 0..ITERATIONS {
+    //     black_box(atomic.get());
+    // }
+    let now = Instant::now();
+    for _ in 0..ITERATIONS {
+        // println!("{:?}", atomic.get());
+        black_box(atomic.load());
+    }
+    let elapsed = now.elapsed();
+    println!("arc_swap: {:?}", elapsed);
+}
+
 // fn crossbeam() {
 //     let atomic = Arc::new(AtomicCell::new(value!()));
 //     for _ in 0..NUM_READERS {
@@ -154,9 +188,7 @@ fn atomic_slc() {
 //         });
 //     }
 //     thread::sleep(Duration::from_secs(1));
-//     for _ in 0..ITERATIONS {
-//         black_box(atomic.load());
-//     }
+//     set_priority(1);
 //     let now = Instant::now();
 //     for _ in 0..ITERATIONS {
 //         black_box(atomic.load());
@@ -176,7 +208,7 @@ fn mutex() {
     for _ in 0..NUM_WRITERS {
         let atomic = atomic.clone();
         thread::spawn(move || {
-            set_priority(1);
+            // set_priority(1);
             loop {
                 let _v = mem::replace(atomic.lock().deref_mut(), value!());
                 nops();
@@ -240,13 +272,15 @@ fn mutex_slc() {
     for _ in 0..NUM_WRITERS {
         let inner = inner.clone();
         thread::spawn(move || {
-            set_priority(1);
+            // set_priority(1);
             loop {
                 let _old;
                 {
                     let mut lock = inner.value.lock();
                     _old = mem::replace(lock.deref_mut(), value!());
-                    inner.version.store(inner.version.load(Relaxed) + 1, Relaxed);
+                    inner
+                        .version
+                        .store(inner.version.load(Relaxed) + 1, Relaxed);
                 }
                 nops();
             }
@@ -257,7 +291,7 @@ fn mutex_slc() {
         version: 0,
         inner: inner.clone(),
     };
-    set_priority(1);
+    // set_priority(1);
     thread::sleep(Duration::from_secs(1));
     // for _ in 0..ITERATIONS {
     //     black_box(outer.get());

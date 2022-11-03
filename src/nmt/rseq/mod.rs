@@ -1,7 +1,6 @@
 #![allow(non_upper_case_globals, non_camel_case_types, improper_ctypes)]
 
 pub use inner::Inner;
-pub use rseq::get_cpu;
 
 mod abort_on_drop;
 mod cache_line;

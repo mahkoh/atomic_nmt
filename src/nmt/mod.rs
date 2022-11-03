@@ -78,9 +78,7 @@ where
     /// `2`.
     #[inline]
     pub fn get(&self) -> T {
-        unsafe {
-            self.inner.get().value
-        }
+        self.inner.get().value
     }
 }
 
